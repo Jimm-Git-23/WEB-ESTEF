@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Nuestra Historia</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Configuración del proyecto (nombres, textos, fecha del contador) -->
+<script src="config.js"></script>
+<!-- Configuración de Firebase (Jimmy debe completar sus propios datos aquí) -->
+<script src="firebase-config.js"></script>
+<!-- SDK de Firebase (solo Firestore + Storage, no se usa Auth) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+
+<style>
+  :root{
+    --bg: #F5EFE6;
+    --card: #FBF8F3;
+    --terracota: #B85D43;
+    --rosa: #D9A49A;
+    --texto: #493B35;
+    --texto-sec: #8A7770;
+    --linea: #E7DCD0;
+    --blanco: #FFFDF9;
+  }
+  *{ box-sizing: border-box; }
+  html,body{
+    background: var(--bg);
+    color: var(--texto);
+    font-family: 'Inter','Plus Jakarta Sans',sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+  }
+  .font-serif-title{ font-family:'Playfair Display', serif; }
+  .font-serif-soft{ font-family:'Cormorant Garamond', serif; }
+
+  .card-shell{
+    background: var(--card);
+    border-radius: 28px;
+    box-shadow: 0 20px 60px -20px rgba(73,59,53,0.25), 0 2px 10px rgba(73,59,53,0.06);
+  }
+  .divider{
+    height:1px;
+    background: var(--linea);
+    width: 100%;
+  }
+  .heart-mark{ color: var(--terracota); }
+
+  .polaroid{
+    background: var(--blanco);
+    padding: 10px 10px 28px 10px;
+    border-radius: 6px;
+    box-shadow: 0 10px 25px -10px rgba(73,59,53,0.3);
+    transform: rotate(var(--rot,0deg));
+  }
+
+  .fade-section{
+    opacity: 0;
+    transform: translateY(18px);
+    transition: opacity .9s ease, transform .9s ease;
+  }
+  .fade-section.is-visible{
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .hidden-section{ display:none !important; }
+
+  @keyframes floatUp{
+    0%{ transform: translateY(0) scale(1); opacity:0; }
+    10%{ opacity: .55; }
+    100%{ transform: translateY(-120vh) scale(1.1); opacity:0; }
+  }
+  .floating-heart{
+    position:fixed;
+    bottom:-40px;
+    font-size:18px;
+    color: var(--rosa);
+    pointer-events:none;
+    animation: floatUp linear forwards;
+    z-index: 5;
+    opacity:.55;
+  }
+
+  @keyframes confettiFall{
+    0%{ transform: translateY(-10vh) rotate(0deg); opacity:1;}
+    100%{ transform: translateY(100vh) rotate(540deg); opacity:0;}
+  }
+  .confetti-piece{
+    position:fixed; top:0; width:8px; height:14px;
+    pointer-events:none; z-index: 50;
+    animation: confettiFall linear forwards;
+  }
+
+  .btn-primary{
+    background: var(--terracota);
+    color: var(--blanco);
+    border-radius: 999px;
+    padding: 14px 28px;
+    font-weight:600;
+    letter-spacing:.01em;
+    transition: transform .2s ease, box-shadow .2s ease;
+    box-shadow: 0 10px 24px -10px rgba(184,93,67,.6);
+  }
+  .btn-primary:hover{ transform: translateY(-2px); }
+  .btn-primary:active{ transform: translateY(0); }
+  .btn-primary:focus-visible, .btn-secondary:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible{
+    outline: 3px solid var(--rosa);
+    outline-offset: 2px;
+  }
+
+  .btn-secondary{
+    background: transparent;
+    color: var(--texto);
+    border: 1.5px solid var(--rosa);
+    border-radius: 999px;
+    padding: 12px 24px;
+    font-weight:500;
+    transition: background .2s ease;
+    display:inline-block;
+    text-decoration:none;
+  }
+  .btn-secondary:hover{ background: rgba(217,164,154,.15); }
+
+  .quote-mark{
+    font-family:'Playfair Display', serif;
+    color: var(--rosa);
+    font-size: 2.6rem;
+    line-height: 1;
+  }
+
+  mark.highlight{
+    background: none;
+    color: var(--terracota);
+    font-style: italic;
+    font-weight: 600;
+  }
+
+  .counter-block{
+    background: var(--blanco);
+    border-radius: 16px;
+    padding: 14px 10px;
+    text-align:center;
+    box-shadow: 0 6px 18px -10px rgba(73,59,53,.25);
+    min-width: 64px;
+  }
+
+  .photo-slot{
+    position:relative;
+    width:100%;
+    aspect-ratio: 4/5;
+    border-radius: 18px;
+    overflow:hidden;
+    background: linear-gradient(135deg, #EADFD3, #E3CDBE);
+    display:flex; align-items:center; justify-content:center;
+    cursor:pointer;
+  }
+  .photo-slot img{ width:100%; height:100%; object-fit:cover; }
+  .photo-slot .placeholder-icon{ color:#B8977F; opacity:.6; }
+
+  .gallery-grid{
+    display:grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 14px;
+  }
+  @media (min-width: 560px){
+    .gallery-grid{ grid-template-columns: repeat(3, 1fr); }
+  }
+
+  .modal-overlay{
+    position:fixed; inset:0; background: rgba(73,59,53,.45);
+    display:flex; align-items:center; justify-content:center;
+    padding: 20px; z-index: 60;
+  }
+  .modal-box{
+    background: var(--card); border-radius:20px; padding:24px;
+    max-width: 420px; width:100%;
+    box-shadow: 0 20px 60px -20px rgba(0,0,0,.4);
+  }
+
+  .skeleton{
+    background: linear-gradient(90deg, #ECE3D7 25%, #F3EAE0 37%, #ECE3D7 63%);
+    background-size: 400% 100%;
+    animation: shimmer 1.4s ease infinite;
+    border-radius: 10px;
+  }
+  @keyframes shimmer{ 0%{background-position: 100% 0;} 100%{background-position: 0 0;} }
+
+  @media (prefers-reduced-motion: reduce){
+    .fade-section{ transition:none; }
+    .floating-heart, .confetti-piece, .skeleton{ animation:none !important; display:none; }
+  }
+
+  .sr-only{
+    position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+  }
+
+  textarea, input[type=text]{
+    width:100%;
+    border:1px solid var(--linea);
+    border-radius: 12px;
+    padding: 10px 14px;
+    background: var(--blanco);
+    color: var(--texto);
+    font-family: inherit;
+  }
+
+  #toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background: var(--texto); color: var(--blanco);
+    padding: 10px 18px; border-radius: 999px; font-size:.85rem;
+    z-index: 70; opacity:0; transition: opacity .3s ease, transform .3s ease;
+    pointer-events:none;
+  }
+  #toast.show{ opacity:1; transform: translateX(-50%) translateY(-6px); }
+</style>
+</head>
+<body>
+
+<div id="hearts-layer" aria-hidden="true"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Control de música (se muestra solo si hay URL configurada) -->
+<button id="music-toggle" class="hidden-section fixed top-4 right-4 z-40 w-11 h-11 rounded-full bg-[var(--card)] shadow-lg flex items-center justify-center"
+  aria-label="Reproducir música" aria-pressed="false">
+  <svg id="music-icon-play" width="16" height="16" viewBox="0 0 24 24" fill="var(--terracota)"><path d="M8 5v14l11-7z"/></svg>
+  <svg id="music-icon-pause" class="hidden-section" width="16" height="16" viewBox="0 0 24 24" fill="var(--terracota)"><path d="M6 5h4v14H6zM14 5h4v14h-4z"/></svg>
+</button>
+<audio id="bg-music" loop></audio>
+
+<main class="min-h-screen w-full flex flex-col items-center py-8 px-4" style="padding-bottom: env(safe-area-inset-bottom, 2rem);">
+  <div class="w-full max-w-md flex flex-col gap-10">
+
+    <!-- ============ SECCIÓN 1: PORTADA ============ -->
+    <section id="s-portada" class="fade-section is-visible card-shell p-6 flex flex-col items-center text-center gap-5">
+      <div id="portada-photo" class="photo-slot w-56 mx-auto" tabindex="0" role="button" aria-label="Cambiar fotografía de portada">
+        <svg class="placeholder-icon" width="40" height="40" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l2.9 6.3L22 9l-5 5.1L18.2 21 12 17.6 5.8 21 7 14.1 2 9l7.1-.7z" opacity=".4"/></svg>
+      </div>
+      <input type="file" id="portada-photo-input" accept="image/jpeg,image/png,image/webp" class="hidden-section" />
+
+      <h1 id="nombres-titulo" class="font-serif-title text-2xl tracking-wide" style="color:var(--texto)">
+        <span id="nombre-mi"></span> &amp; <span id="nombre-su"></span>
+      </h1>
+
+      <div class="divider max-w-[80px]"></div>
+
+      <p id="portada-mensaje" class="font-serif-soft italic text-xl leading-relaxed" style="color:var(--texto)"></p>
+
+      <button id="btn-abrir-sorpresa" class="btn-primary mt-2">
+        <span id="portada-boton-texto"></span> <span class="heart-mark">♥</span>
+      </button>
+    </section>
+
+    <!-- ============ SECCIÓN 2: LA CARTA ============ -->
+    <section id="s-carta" class="fade-section hidden-section card-shell p-7 flex flex-col gap-5 relative">
+      <span class="quote-mark absolute top-3 left-5" aria-hidden="true">"</span>
+      <span class="quote-mark absolute bottom-3 right-5 rotate-180" aria-hidden="true">"</span>
+
+      <p class="text-xs tracking-[0.2em] uppercase text-center" style="color:var(--texto-sec)" id="carta-encabezado"></p>
+      <h2 id="carta-titulo" class="font-serif-title text-xl text-center leading-snug px-2"></h2>
+
+      <div id="carta-cuerpo" class="font-serif-soft text-[1.08rem] leading-[1.9] flex flex-col gap-4 px-1" style="color:var(--texto)"></div>
+
+      <div class="flex flex-col items-center gap-3 mt-2">
+        <span class="heart-mark text-xl">♥</span>
+        <div class="divider max-w-[60px]"></div>
+        <p id="carta-firma" class="font-serif-soft italic text-right w-full pr-2" style="color:var(--texto-sec)"></p>
+      </div>
+
+      <button id="btn-ir-propuesta" class="btn-secondary mx-auto mt-3">Continuar</button>
+    </section>
+
+    <!-- ============ SECCIÓN 3: LA GRAN PREGUNTA ============ -->
+    <section id="s-propuesta" class="fade-section hidden-section card-shell p-8 flex flex-col items-center text-center gap-6">
+      <p id="propuesta-intro" class="font-serif-soft italic text-lg leading-relaxed" style="color:var(--texto-sec)"></p>
+      <h2 id="propuesta-pregunta" class="font-serif-title text-3xl leading-tight" style="color:var(--texto)"></h2>
+
+      <div class="flex flex-col gap-3 w-full items-center mt-2">
+        <button id="btn-si-quiero" class="btn-primary w-full max-w-[280px]">
+          <span id="propuesta-boton-si"></span> <span class="heart-mark">♥</span>
+        </button>
+        <button id="btn-hablarlo" class="btn-secondary w-full max-w-[280px]">
+          <span id="propuesta-boton-hablar"></span>
+        </button>
+      </div>
+    </section>
+
+    <!-- ============ SECCIÓN 4: CELEBRACIÓN Y CONTADOR ============ -->
+    <section id="s-celebracion" class="fade-section hidden-section card-shell p-7 flex flex-col items-center text-center gap-5">
+      <span class="heart-mark text-2xl">♥</span>
+      <h2 id="celebracion-titulo" class="font-serif-title text-2xl"></h2>
+
+      <div class="grid grid-cols-4 gap-2 w-full" role="group" aria-label="Tiempo juntos" aria-live="off">
+        <div class="counter-block"><div id="c-dias" class="font-serif-title text-2xl" style="color:var(--terracota)">00</div><div class="text-[0.65rem] uppercase tracking-wide" style="color:var(--texto-sec)">Días</div></div>
+        <div class="counter-block"><div id="c-horas" class="font-serif-title text-2xl" style="color:var(--terracota)">00</div><div class="text-[0.65rem] uppercase tracking-wide" style="color:var(--texto-sec)">Horas</div></div>
+        <div class="counter-block"><div id="c-min" class="font-serif-title text-2xl" style="color:var(--terracota)">00</div><div class="text-[0.65rem] uppercase tracking-wide" style="color:var(--texto-sec)">Min</div></div>
+        <div class="counter-block"><div id="c-seg" class="font-serif-title text-2xl" style="color:var(--terracota)">00</div><div class="text-[0.65rem] uppercase tracking-wide" style="color:var(--texto-sec)">Seg</div></div>
+      </div>
+      <p class="text-sm" style="color:var(--texto-sec)"><span id="celebracion-desde-texto"></span> <strong id="celebracion-fecha" style="color:var(--texto)"></strong></p>
+
+      <button id="btn-ir-foto-final" class="btn-secondary mt-2">Continuar</button>
+    </section>
+
+    <!-- ============ SECCIÓN 5: FOTO ESPECIAL Y FRASE FINAL ============ -->
+    <section id="s-foto-final" class="fade-section hidden-section card-shell p-7 flex flex-col items-center gap-5">
+      <div id="foto-final-photo" class="photo-slot w-full" tabindex="0" role="button" aria-label="Subir o cambiar la fotografía especial">
+        <svg class="placeholder-icon" width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><path d="M4 5h3l1-2h8l1 2h3a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zm8 13a5 5 0 1 0 0-10 5 5 0 0 0 0 10z" opacity=".4"/></svg>
+      </div>
+      <input type="file" id="foto-final-input" accept="image/jpeg,image/png,image/webp" class="hidden-section" />
+
+      <p id="foto-final-frase" class="font-serif-soft italic text-center text-lg leading-[1.9] px-2" style="color:var(--texto)"></p>
+      <span class="heart-mark">♥</span>
+
+      <button id="btn-ir-album" class="btn-secondary mt-1">Ver nuestro espacio de recuerdos</button>
+    </section>
+
+    <!-- ============ SECCIÓN 6: NUESTROS RECUERDOS ============ -->
+    <section id="s-album" class="fade-section hidden-section card-shell p-6 flex flex-col gap-5">
+      <div class="text-center">
+        <h2 id="album-titulo" class="font-serif-title text-2xl"></h2>
+        <p id="album-subtitulo" class="text-sm mt-1" style="color:var(--texto-sec)"></p>
+      </div>
+
+      <div>
+        <label for="album-input" class="btn-primary w-full text-center cursor-pointer block">
+          Subir fotografías
+        </label>
+        <input type="file" id="album-input" accept="image/jpeg,image/png,image/webp" multiple class="hidden-section" />
+        <p id="album-estado" class="text-xs text-center mt-2" style="color:var(--texto-sec)"></p>
+      </div>
+
+      <div id="album-gallery" class="gallery-grid" aria-live="polite"></div>
+      <p id="album-vacio" class="text-sm text-center hidden-section" style="color:var(--texto-sec)">Todavía no hay fotografías aquí. Sube la primera ♥</p>
+    </section>
+
+  </div>
+</main>
+
+<!-- Modal: "Quiero hablarlo contigo" -->
+<div id="modal-hablar" class="modal-overlay hidden-section" role="dialog" aria-modal="true" aria-labelledby="modal-hablar-titulo">
+  <div class="modal-box flex flex-col gap-4">
+    <h3 id="modal-hablar-titulo" class="font-serif-title text-lg">Cuéntame lo que piensas</h3>
+    <p class="text-sm" style="color:var(--texto-sec)">Sin presión. Puedes escribir lo que sientas y yo lo leeré con calma.</p>
+    <label for="modal-hablar-texto" class="sr-only">Tu mensaje</label>
+    <textarea id="modal-hablar-texto" rows="4" placeholder="Escribe aquí…"></textarea>
+    <div class="flex gap-3 justify-end">
+      <button id="modal-hablar-cancelar" class="btn-secondary">Cerrar</button>
+      <button id="modal-hablar-enviar" class="btn-primary">Enviar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: confirmar eliminación -->
+<div id="modal-confirm" class="modal-overlay hidden-section" role="dialog" aria-modal="true" aria-labelledby="modal-confirm-titulo">
+  <div class="modal-box flex flex-col gap-4">
+    <h3 id="modal-confirm-titulo" class="font-serif-title text-lg">¿Eliminar esta fotografía?</h3>
+    <p class="text-sm" style="color:var(--texto-sec)">Esta acción no se puede deshacer.</p>
+    <div class="flex gap-3 justify-end">
+      <button id="modal-confirm-cancelar" class="btn-secondary">Cancelar</button>
+      <button id="modal-confirm-aceptar" class="btn-primary">Eliminar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: dedicatoria al subir -->
+<div id="modal-dedicatoria" class="modal-overlay hidden-section" role="dialog" aria-modal="true" aria-labelledby="modal-dedicatoria-titulo">
+  <div class="modal-box flex flex-col gap-4">
+    <h3 id="modal-dedicatoria-titulo" class="font-serif-title text-lg">Una pequeña dedicatoria (opcional)</h3>
+    <div id="modal-dedicatoria-nombre-wrap" class="hidden-section flex flex-col gap-2">
+      <label for="modal-dedicatoria-nombre" class="text-xs" style="color:var(--texto-sec)">Tu nombre (para firmar tus fotos en el álbum)</label>
+      <input type="text" id="modal-dedicatoria-nombre" placeholder="Ej: Jimmy" maxlength="40" />
+    </div>
+    <label for="modal-dedicatoria-texto" class="sr-only">Dedicatoria</label>
+    <input type="text" id="modal-dedicatoria-texto" placeholder="Ej: Nuestro primer viaje juntos…" maxlength="120" />
+    <div class="flex gap-3 justify-end">
+      <button id="modal-dedicatoria-omitir" class="btn-secondary">Omitir</button>
+      <button id="modal-dedicatoria-guardar" class="btn-primary">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox de foto -->
+<div id="lightbox" class="modal-overlay hidden-section" role="dialog" aria-modal="true" aria-label="Fotografía ampliada">
+  <div class="flex flex-col gap-3 items-center max-w-lg w-full">
+    <img id="lightbox-img" src="" alt="" class="w-full rounded-xl max-h-[70vh] object-contain bg-black/10" />
+    <p id="lightbox-caption" class="text-center text-sm" style="color:var(--blanco)"></p>
+    <div class="flex gap-3">
+      <a id="lightbox-download" href="#" download target="_blank" class="btn-secondary" style="background:var(--blanco)">Descargar</a>
+      <button id="lightbox-eliminar" class="btn-secondary hidden-section" style="background:var(--blanco)">Eliminar</button>
+      <button id="lightbox-cerrar" class="btn-primary">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const CFG = window.NUESTRA_HISTORIA_CONFIG;
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  function toast(msg){
+    const el = $('#toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : String(str);
+    return d.innerHTML;
+  }
+
+  // ---------- Pintar textos de configuración ----------
+  function renderConfigTexts(){
+    $('#nombre-mi').textContent = CFG.miNombre;
+    $('#nombre-su').textContent = CFG.suNombre;
+    $('#portada-mensaje').textContent = '«' + CFG.portada.mensaje + '»';
+    $('#portada-boton-texto').textContent = CFG.portada.boton;
+
+    $('#carta-encabezado').textContent = CFG.carta.encabezado;
+    $('#carta-titulo').textContent = '«' + CFG.carta.titulo + '»';
+    const cuerpo = $('#carta-cuerpo');
+    cuerpo.innerHTML = '';
+    CFG.carta.parrafos.forEach(p => {
+      let html = escapeHtml(p);
+      (CFG.carta.destacar || []).forEach(frase => {
+        const esc = escapeHtml(frase);
+        if (html.includes(esc)) {
+          html = html.split(esc).join('<mark class="highlight">' + esc + '</mark>');
+        }
+      });
+      const para = document.createElement('p');
+      para.innerHTML = html;
+      cuerpo.appendChild(para);
+    });
+    $('#carta-firma').textContent = '— ' + CFG.miNombre;
+
+    $('#propuesta-intro').textContent = '«' + CFG.propuesta.intro + '»';
+    $('#propuesta-pregunta').textContent = CFG.propuesta.pregunta.toUpperCase();
+    $('#propuesta-boton-si').textContent = CFG.propuesta.botonSi;
+    $('#propuesta-boton-hablar').textContent = CFG.propuesta.botonHablar;
+
+    $('#celebracion-titulo').textContent = CFG.celebracion.titulo;
+    $('#celebracion-desde-texto').textContent = CFG.celebracion.desdeTexto;
+
+    $('#foto-final-frase').textContent = '«' + CFG.fotoFinal.frase + '»';
+
+    $('#album-titulo').textContent = CFG.album.titulo + ' ♥';
+    $('#album-subtitulo').textContent = CFG.album.subtitulo;
+
+    if (CFG.musica && CFG.musica.url) {
+      $('#bg-music').src = CFG.musica.url;
+      $('#music-toggle').classList.remove('hidden-section');
+    }
+  }
+
+  // ---------- Navegación progresiva ----------
+  function revealSection(id){
+    const el = document.getElementById(id);
+    el.classList.remove('hidden-section');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        el.classList.add('is-visible');
+        el.scrollIntoView({ behavior: prefersReducedMotion ? 'auto' : 'smooth', block: 'start' });
+      });
+    });
+  }
+
+  function spawnFloatingHearts(count){
+    if (prefersReducedMotion) return;
+    const layer = $('#hearts-layer');
+    for (let i=0;i<count;i++){
+      const h = document.createElement('div');
+      h.className = 'floating-heart';
+      h.textContent = '♥';
+      h.style.left = (Math.random()*90 + 5) + 'vw';
+      h.style.animationDuration = (4 + Math.random()*3) + 's';
+      h.style.animationDelay = (Math.random()*0.6) + 's';
+      layer.appendChild(h);
+      setTimeout(() => h.remove(), 8000);
+    }
+  }
+
+  function spawnConfetti(){
+    if (prefersReducedMotion) { spawnFloatingHearts(10); return; }
+    const colors = ['#B85D43', '#D9A49A', '#E7DCD0', '#FFFDF9'];
+    for (let i=0;i<60;i++){
+      const p = document.createElement('div');
+      p.className = 'confetti-piece';
+      p.style.left = Math.random()*100 + 'vw';
+      p.style.background = colors[Math.floor(Math.random()*colors.length)];
+      p.style.animationDuration = (2.2 + Math.random()*1.6) + 's';
+      p.style.animationDelay = (Math.random()*0.4) + 's';
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 4200);
+    }
+    spawnFloatingHearts(14);
+  }
+
+  // ---------- Música ----------
+  (function musicSetup(){
+    const btn = $('#music-toggle');
+    const audio = $('#bg-music');
+    const iconPlay = $('#music-icon-play');
+    const iconPause = $('#music-icon-pause');
+    btn.addEventListener('click', () => {
+      if (audio.paused) {
+        audio.play().catch(() => toast('No se pudo reproducir la música.'));
+        iconPlay.classList.add('hidden-section');
+        iconPause.classList.remove('hidden-section');
+        btn.setAttribute('aria-pressed','true');
+        btn.setAttribute('aria-label','Pausar música');
+      } else {
+        audio.pause();
+        iconPlay.classList.remove('hidden-section');
+        iconPause.classList.add('hidden-section');
+        btn.setAttribute('aria-pressed','false');
+        btn.setAttribute('aria-label','Reproducir música');
+      }
+    });
+  })();
+
+  // ============================================================
+  // Firebase (Firestore + Storage). Sin autenticación: el acceso a
+  // la página es por enlace privado, no por cuenta/login.
+  // Si firebase-config.js todavía tiene los valores de ejemplo, la
+  // narrativa funciona igual, pero el álbum y las fotos únicas
+  // muestran un aviso en vez de guardarse.
+  // ============================================================
+  const FBCFG = window.FIREBASE_CONFIG || {};
+  const firebaseConfigured = !!(FBCFG.apiKey && FBCFG.apiKey !== 'TU_API_KEY_AQUI' && window.firebase);
+  let db = null, storage = null;
+  if (firebaseConfigured) {
+    try {
+      firebase.initializeApp(FBCFG);
+      db = firebase.firestore();
+      storage = firebase.storage();
+    } catch (e) {
+      console.error('No se pudo inicializar Firebase:', e);
+    }
+  }
+
+  function needsPersistenceNotice(){
+    toast('Esto se guardará cuando Firebase esté configurado (firebase-config.js).');
+  }
+
+  // ---------- Identidad simple por dispositivo (sin login) ----------
+  // Un nombre que cada persona escribe una sola vez al subir su primera
+  // foto, guardado en este navegador, solo para firmar sus fotos.
+  function getLocalName(){
+    try { return localStorage.getItem('nh_nombre') || ''; } catch (e) { return ''; }
+  }
+  function setLocalName(name){
+    try { localStorage.setItem('nh_nombre', name); } catch (e) {}
+  }
+  function localId(){
+    try {
+      let id = localStorage.getItem('nh_id');
+      if (!id) {
+        id = 'u_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem('nh_id', id);
+      }
+      return id;
+    } catch (e) { return 'u_anonimo'; }
+  }
+
+  // ============================================================
+  // SECCIÓN 1 → 2: abrir la carta
+  // ============================================================
+  $('#btn-abrir-sorpresa').addEventListener('click', () => {
+    revealSection('s-carta');
+  });
+
+  $('#btn-ir-propuesta').addEventListener('click', () => {
+    revealSection('s-propuesta');
+  });
+
+  // ============================================================
+  // SECCIÓN 3: la gran pregunta
+  // ============================================================
+  $('#btn-si-quiero').addEventListener('click', () => {
+    spawnConfetti();
+    setTimeout(() => {
+      revealSection('s-celebracion');
+      startCounter();
+    }, prefersReducedMotion ? 150 : 1100);
+  });
+
+  $('#btn-hablarlo').addEventListener('click', () => {
+    $('#modal-hablar').classList.remove('hidden-section');
+    $('#modal-hablar-texto').focus();
+  });
+  $('#modal-hablar-cancelar').addEventListener('click', () => {
+    $('#modal-hablar').classList.add('hidden-section');
+  });
+  $('#modal-hablar-enviar').addEventListener('click', async () => {
+    const texto = $('#modal-hablar-texto').value.trim();
+    if (!texto) { $('#modal-hablar').classList.add('hidden-section'); return; }
+    if (db) {
+      try {
+        await db.collection('notas').add({
+          texto,
+          por: getLocalName() || null,
+          at: firebase.firestore.FieldValue.serverTimestamp(),
+        });
+      } catch (e) { /* se intentó igual */ }
+    }
+    $('#modal-hablar-texto').value = '';
+    $('#modal-hablar').classList.add('hidden-section');
+    toast('Gracias por decírmelo. Lo leeré con calma ♥');
+  });
+
+  // ============================================================
+  // SECCIÓN 4: contador — fecha FIJA, no depende de guardar nada
+  // ============================================================
+  let counterInterval = null;
+  function startCounter(){
+    const startMs = new Date(CFG.celebracion.fechaInicio).getTime();
+    if (counterInterval) clearInterval(counterInterval);
+    $('#celebracion-fecha').textContent = new Date(startMs).toLocaleDateString('es-PE', { day:'numeric', month:'long', year:'numeric' });
+
+    function tick(){
+      const diffMs = Date.now() - startMs;
+      const totalSec = Math.max(0, Math.floor(diffMs / 1000));
+      const dias = Math.floor(totalSec / 86400);
+      const horas = Math.floor((totalSec % 86400) / 3600);
+      const min = Math.floor((totalSec % 3600) / 60);
+      const seg = totalSec % 60;
+      $('#c-dias').textContent = String(dias).padStart(2,'0');
+      $('#c-horas').textContent = String(horas).padStart(2,'0');
+      $('#c-min').textContent = String(min).padStart(2,'0');
+      $('#c-seg').textContent = String(seg).padStart(2,'0');
+    }
+    tick();
+    counterInterval = setInterval(tick, 1000);
+  }
+
+  $('#btn-ir-foto-final').addEventListener('click', () => revealSection('s-foto-final'));
+  $('#btn-ir-album').addEventListener('click', () => revealSection('s-album'));
+
+  // ============================================================
+  // Fotos de un solo slot (portada / foto final) vía Firebase Storage
+  // ============================================================
+  function wireSinglePhoto({ slotId, inputId, docPath, storagePath }){
+    const slot = document.getElementById(slotId);
+    const input = document.getElementById(inputId);
+    const open = () => input.click();
+    slot.addEventListener('click', open);
+    slot.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
+
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if (!file) return;
+      if (!CFG.album.tiposPermitidos.includes(file.type)) {
+        toast('Usa una imagen JPG, PNG o WEBP.'); input.value=''; return;
+      }
+      if (!db || !storage) { needsPersistenceNotice(); input.value=''; return; }
+      slot.innerHTML = '<div class="skeleton w-full h-full"></div>';
+      try {
+        const ref = storage.ref().child(storagePath);
+        await ref.put(file);
+        const url = await ref.getDownloadURL();
+        await db.doc(docPath).set({ url, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+        renderSinglePhoto(slotId, url);
+        toast('Fotografía guardada ♥');
+      } catch (e) {
+        console.error(e);
+        toast('No se pudo subir la fotografía. Intenta de nuevo.');
+        slot.innerHTML = slot._placeholderHtml || '';
+      }
+      input.value = '';
+    });
+  }
+
+  function renderSinglePhoto(slotId, url){
+    const slot = document.getElementById(slotId);
+    slot.innerHTML = '<img src="' + url + '" alt="" />';
+  }
+
+  async function loadSinglePhoto({ slotId, docPath }){
+    const slot = document.getElementById(slotId);
+    slot._placeholderHtml = slot.innerHTML;
+    if (!db) return;
+    try {
+      const snap = await db.doc(docPath).get();
+      if (snap.exists && snap.data() && snap.data().url) {
+        renderSinglePhoto(slotId, snap.data().url);
+      }
+    } catch (e) { console.error(e); }
+  }
+
+  wireSinglePhoto({ slotId:'portada-photo', inputId:'portada-photo-input', docPath:'config/portada', storagePath:'portada/main.jpg' });
+  wireSinglePhoto({ slotId:'foto-final-photo', inputId:'foto-final-input', docPath:'config/fotoFinal', storagePath:'fotoFinal/main.jpg' });
+
+  // ============================================================
+  // SECCIÓN 6: álbum compartido
+  // ============================================================
+  let pendingFiles = [];
+
+  $('#album-input').addEventListener('change', () => {
+    pendingFiles = Array.from($('#album-input').files || []);
+    $('#album-input').value = '';
+    processNextPendingFile();
+  });
+
+  function processNextPendingFile(){
+    if (!pendingFiles.length) return;
+    const file = pendingFiles[0];
+    if (!CFG.album.tiposPermitidos.includes(file.type)) {
+      toast('"' + file.name + '" no es JPG/PNG/WEBP y se omitió.');
+      pendingFiles.shift();
+      return processNextPendingFile();
+    }
+    if (file.size > CFG.album.tamanoMaximoMB * 1024 * 1024) {
+      toast('"' + file.name + '" supera ' + CFG.album.tamanoMaximoMB + 'MB y se omitió.');
+      pendingFiles.shift();
+      return processNextPendingFile();
+    }
+    $('#modal-dedicatoria-texto').value = '';
+    const nombreWrap = $('#modal-dedicatoria-nombre-wrap');
+    if (!getLocalName()) {
+      $('#modal-dedicatoria-nombre').value = '';
+      nombreWrap.classList.remove('hidden-section');
+    } else {
+      nombreWrap.classList.add('hidden-section');
+    }
+    $('#modal-dedicatoria').classList.remove('hidden-section');
+    $('#modal-dedicatoria-texto').focus();
+  }
+
+  async function uploadPendingFile(dedicatoria){
+    const nombreWrap = $('#modal-dedicatoria-nombre-wrap');
+    if (!nombreWrap.classList.contains('hidden-section')) {
+      const n = $('#modal-dedicatoria-nombre').value.trim();
+      if (n) setLocalName(n);
+    }
+    const file = pendingFiles.shift();
+    $('#modal-dedicatoria').classList.add('hidden-section');
+    if (!file) return;
+    if (!db || !storage) { needsPersistenceNotice(); processNextPendingFile(); return; }
+
+    $('#album-estado').textContent = 'Subiendo "' + file.name + '"…';
+    try {
+      const id = 'm_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+      const storagePath = 'memories/' + id + '.jpg';
+      const ref = storage.ref().child(storagePath);
+      await ref.put(file);
+      const url = await ref.getDownloadURL();
+      await db.collection('memories').doc(id).set({
+        url,
+        storagePath,
+        uploaderId: localId(),
+        uploaderName: getLocalName() || 'Alguien especial',
+        dedicatoria: dedicatoria || '',
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+      $('#album-estado').textContent = '';
+      toast('Fotografía guardada en el álbum ♥');
+      await loadAlbum();
+    } catch (e) {
+      console.error(e);
+      $('#album-estado').textContent = '';
+      toast('No se pudo subir "' + file.name + '". Puedes reintentar.');
+    }
+    processNextPendingFile();
+  }
+
+  $('#modal-dedicatoria-guardar').addEventListener('click', () => uploadPendingFile($('#modal-dedicatoria-texto').value.trim()));
+  $('#modal-dedicatoria-omitir').addEventListener('click', () => uploadPendingFile(''));
+
+  async function loadAlbum(){
+    const gallery = $('#album-gallery');
+    const vacio = $('#album-vacio');
+    if (!db) {
+      vacio.classList.remove('hidden-section');
+      vacio.textContent = 'El álbum se activa cuando Firebase esté configurado.';
+      return;
+    }
+    try {
+      const snap = await db.collection('memories').orderBy('createdAt', 'desc').limit(200).get();
+      gallery.innerHTML = '';
+      if (snap.empty) {
+        vacio.classList.remove('hidden-section');
+        vacio.textContent = 'Todavía no hay fotografías aquí. Sube la primera ♥';
+        return;
+      }
+      vacio.classList.add('hidden-section');
+      snap.forEach(doc => renderMemoryCard({ id: doc.id, data: doc.data() }));
+    } catch (e) {
+      console.error(e);
+      vacio.classList.remove('hidden-section');
+      vacio.textContent = 'No se pudo cargar el álbum. Intenta de nuevo más tarde.';
+    }
+  }
+
+  function renderMemoryCard(doc){
+    const d = doc.data;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'polaroid text-left block';
+    card.style.setProperty('--rot', (Math.random()*4 - 2) + 'deg');
+    const fecha = (d.createdAt && d.createdAt.toDate) ? d.createdAt.toDate().toLocaleDateString('es-PE', {day:'numeric', month:'short'}) : '';
+    card.innerHTML =
+      '<img src="' + d.url + '" alt="' + escapeHtml(d.dedicatoria || 'Recuerdo compartido') + '" class="w-full aspect-square object-cover rounded" />' +
+      '<div class="text-[0.65rem] mt-2" style="color:var(--texto-sec)">' + escapeHtml(d.uploaderName || 'Alguien especial') + ' · ' + fecha + '</div>';
+    card.addEventListener('click', () => openLightbox(doc));
+    $('#album-gallery').appendChild(card);
+  }
+
+  let currentLightboxDoc = null;
+  function openLightbox(doc){
+    currentLightboxDoc = doc;
+    const d = doc.data;
+    $('#lightbox-img').src = d.url;
+    $('#lightbox-img').alt = d.dedicatoria || 'Recuerdo compartido';
+    $('#lightbox-caption').textContent = d.dedicatoria || '';
+
+    const dlBtn = $('#lightbox-download');
+    dlBtn.href = d.url;
+    dlBtn.setAttribute('download', 'nuestra-historia-' + doc.id + '.jpg');
+
+    // Sin sistema de login: no hay forma de distinguir cuentas, así que
+    // ambos pueden eliminar cualquier fotografía del álbum compartido.
+    const delBtn = $('#lightbox-eliminar');
+    delBtn.classList.remove('hidden-section');
+    delBtn.onclick = () => confirmDelete(doc);
+
+    $('#lightbox').classList.remove('hidden-section');
+  }
+  $('#lightbox-cerrar').addEventListener('click', () => $('#lightbox').classList.add('hidden-section'));
+
+  function confirmDelete(doc){
+    $('#lightbox').classList.add('hidden-section');
+    $('#modal-confirm').classList.remove('hidden-section');
+    $('#modal-confirm-aceptar').onclick = async () => {
+      $('#modal-confirm').classList.add('hidden-section');
+      try {
+        if (storage && doc.data.storagePath) {
+          await storage.ref().child(doc.data.storagePath).delete().catch(() => {});
+        }
+        if (db) await db.collection('memories').doc(doc.id).delete();
+        toast('Fotografía eliminada.');
+        await loadAlbum();
+      } catch (e) {
+        console.error(e);
+        toast('No se pudo eliminar. Intenta de nuevo.');
+      }
+    };
+  }
+  $('#modal-confirm-cancelar').addEventListener('click', () => $('#modal-confirm').classList.add('hidden-section'));
+
+  // ============================================================
+  // Arranque
+  // ============================================================
+  async function boot(){
+    renderConfigTexts();
+    if (!firebaseConfigured) {
+      console.warn('Firebase no está configurado todavía (ver firebase-config.js). El álbum y las fotos únicas no se guardarán hasta completarlo.');
+    }
+    await loadSinglePhoto({ slotId:'portada-photo', docPath:'config/portada' });
+    await loadSinglePhoto({ slotId:'foto-final-photo', docPath:'config/fotoFinal' });
+    loadAlbum();
+  }
+
+  boot();
+})();
+</script>
+</body>
+</html>
